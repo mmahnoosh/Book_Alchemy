@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, abort
 from flask_sqlalchemy import SQLAlchemy
 from data_models import db, Author, Book
+import datetime
 import os
 
 app = Flask(__name__)
@@ -10,6 +11,17 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'data', 'library.sqlite')}"
 
 db.init_app(app)
+
+
+def check_date_validity(input_date):
+    try:
+        return datetime.datetime.strptime(input_date,"%Y-%m-%d")
+    except ValueError:
+        return "Error!"
+
+
+
+
 
 @app.route("/add_author", methods=["GET", "POST"])
 def add_author():
@@ -21,7 +33,13 @@ def add_author():
             abort(400, description="Name is required")
         if not birthdate:
             abort(400, description="birthdate is required")
-
+        birthdate = check_date_validity(birthdate)
+        if birthdate == "Error!":
+            abort(400, description="birthdate needs to be format 'YYYY-MM-DD'")
+        if date_of_death:
+            date_of_death = check_date_validity(date_of_death)
+            if date_of_death == "Error!":
+                abort(400, description="date of death needs to be format 'YYYY-MM-DD'")
 
     return render_template("add_author.html")
 
