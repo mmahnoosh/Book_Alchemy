@@ -5,11 +5,13 @@ db = SQLAlchemy()
 
 
 class Author(db.Model):
-    __tablename__ = 'Author'
+    __tablename__ = 'authors'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
     birth_date = Column(DATE, nullable=False)
     date_of_death = Column(DATE, nullable=True)
+
+    books = db.relationship("Book", back_populates="author")
 
     def __repr__(self):
         return (f"id: {self.id} name:{self.name} birth_date:{self.birth_date} "
@@ -22,12 +24,14 @@ class Author(db.Model):
 
 
 class Book(db.Model):
-    __tablename__ = 'Book'
+    __tablename__ = 'books'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    isbn = Column(String(20))
-    title = Column(String(100))
-    publication_year = Column(Integer)
-    author_id = Column(Integer)
+    isbn = Column(String(20), nullable=False)
+    title = Column(String(100), nullable=False)
+    publication_year = Column(Integer, nullable=False)
+    author_id = Column(Integer, db.ForeignKey("authors.id"), nullable=False)
+
+    author = db.relationship("Author", back_populates="books")
 
     def __repr__(self):
         return (f"id: {self.id} isbn_: {self.isbn} title:{self.title} "
