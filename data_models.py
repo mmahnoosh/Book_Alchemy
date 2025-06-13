@@ -7,7 +7,7 @@ db = SQLAlchemy()
 class Author(db.Model):
     __tablename__ = 'authors'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False, unique=True)
     birth_date = Column(DATE, nullable=False)
     date_of_death = Column(DATE, nullable=True)
 
@@ -26,10 +26,10 @@ class Author(db.Model):
 class Book(db.Model):
     __tablename__ = 'books'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    isbn = Column(String(20), nullable=False)
-    title = Column(String(100), nullable=False)
+    isbn = Column(String(20), nullable=False, unique=True)
+    title = Column(String(100), nullable=False, unique=True)
     publication_year = Column(Integer, nullable=False)
-    author_id = Column(Integer, db.ForeignKey("authors.id"), nullable=False)
+    author_id = Column(Integer, db.ForeignKey("authors.id"))
 
     author = db.relationship("Author", back_populates="books")
 
