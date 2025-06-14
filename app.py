@@ -308,15 +308,22 @@ def seed_data():
 
 @app.route("/book/<int:book_id>/delete", methods=['POST'])
 def delete_book(book_id):
+    """
+       Deletes a book by its ID.
+       Returns a success message if deletion is successful,
+       or an error message if the book is not found or deletion fails.
+    """
     book = Book.query.get(book_id)
     print(book)
     if not book:
         return jsonify({"error": "Book not found!"}), 404
 
+    book_title = book.title  # Save title before deleting
+
     try:
         db.session.delete(book)
         db.session.commit()
-        return jsonify({"message": "Book deleted successfully."}), 200
+        return jsonify({"message": f"'{book_title}' was deleted successfully."}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "An error occurred during deletion."}), 500
