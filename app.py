@@ -1,10 +1,10 @@
 import datetime
 import os
 
-from flask import Flask, render_template, request, abort
+from flask import Flask, render_template, request, abort, jsonify
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from data_models import db, Author, Book
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 app = Flask(__name__)
 
@@ -17,6 +17,10 @@ db.init_app(app)
 
 
 def check_date_validity(input_date):
+    """
+        Validates a date string in 'YYYY-MM-DD' format.
+        Returns a datetime.date object if valid, otherwise None.
+    """
     try:
         return datetime.datetime.strptime(input_date, "%Y-%m-%d").date()
     except (ValueError, TypeError):
@@ -24,19 +28,30 @@ def check_date_validity(input_date):
 
 
 def check_lifespan_validity(birthdate, date_of_death):
+    """
+      Checks if the date of death is after the birthdate.
+      Returns "Error!" if the lifespan is invalid, otherwise an empty string.
+    """
     if (date_of_death - birthdate).total_seconds() < 0:
         return "Error!"
     return ""
 
+
 @app.route("/", methods=["GET"])
 def home():
+    """
+        Handles the home page request with optional search and sorting.
+        Retrieves books with optional filtering by title or author name,
+        sorts by title or author, and renders the home template with the results.
+    """
     search_query = request.args.get("search_query", "")
     sort_by = request.args.get("sort_by", "title")
 
-    # Starte eine SQLAlchemy-Abfrage mit Join
-    query = db.session.query(Book.title, Author.name.label("author"), Book.isbn).join(Author)
+    # Start a SQLAlchemy query with Join
+    query = db.session.query(Book.id, Book.title, Author.name.label("author"), Book.isbn).join(
+        Author)
 
-    # Optionaler Filter: Suche in Titel **oder** Autorname
+    # Optional filter: Search in title **or** author name
     if search_query:
         search_term = f"%{search_query}%"
         query = query.filter(
@@ -46,25 +61,34 @@ def home():
             )
         )
 
-    # Sortierung nach Autor oder Titel
+    # Sort by author or title
     if sort_by == "author":
         query = query.order_by(Author.name, Book.title)
     else:
         query = query.order_by(Book.title, Author.name)
 
-    # Abfrage ausführen
+    # Execute query
     books_raw = query.all()
 
-    # Tupel in Dictionaries umwandeln
+    # Convert tuples to dictionaries
     books = [
-        {"title": title, "author": author, "isbn": isbn}
-        for title, author, isbn in books_raw
+        {"id": id, "title": title, "author": author, "isbn": isbn}
+        for id, title, author, isbn in books_raw
     ]
 
-    # Übergabe an das Template
-    return render_template("home.html", books=books, sort_by=sort_by, search_query=search_query)
+    # Passing to the template
+    return render_template("home.html", books=books,
+                           sort_by=sort_by, search_query=search_query)
+
+
 @app.route("/add_author", methods=["GET", "POST"])
 def add_author():
+    """
+        Fügt einen neuen Autor hinzu.
+        Bei GET wird das Formular angezeigt, bei POST werden die Formulardaten validiert
+        und gespeichert.
+        Gibt bei Erfolg eine Bestätigung oder bei Fehlern einen HTTP-400-Fehler zurück.
+    """
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         birthdate = request.form.get("birthdate")
@@ -104,6 +128,12 @@ def add_author():
 
 @app.route("/add_book", methods=["GET", "POST"])
 def add_book():
+    """
+       Handles adding a new author via form submission.
+
+       Validates input data, checks date formats and lifespan logic,
+       saves the author to the database if valid, and handles errors appropriately.
+    """
     authors = Author.query.order_by(Author.name).all()
     if request.method == "POST":
         isbn = request.form.get("isbn", "").strip()
@@ -142,43 +172,49 @@ def add_book():
 
 @app.route("/seed")
 def seed_data():
+    """
+        Populates the database with initial authors and books data.
+
+        Checks for existing entries to avoid duplicates,
+        validates dates, and commits all new records to the database.
+    """
     authors_data = [
-  {
-    "name": "George Orwell",
-    "birth_date": "1903-06-25",
-    "date_of_death": "1950-01-21"
-  },
-  {
-    "name": "J.K. Rowling",
-    "birth_date": "1965-07-31",
-    "date_of_death": ""
-  },
-  {
-    "name": "Jane Austen",
-    "birth_date": "1775-12-16",
-    "date_of_death": "1817-07-18"
-  },
-  {
-    "name": "Ernest Hemingway",
-    "birth_date": "1899-07-21",
-    "date_of_death": "1961-07-02"
-  },
-  {
-    "name": "Franz Kafka",
-    "birth_date": "1883-07-03",
-    "date_of_death": "1924-06-03"
-  },
-  {
-    "name": "Haruki Murakami",
-    "birth_date": "1949-01-12",
-    "date_of_death": ""
-  },
-  {
-    "name": "Leo Tolstoy",
-    "birth_date": "1828-09-09",
-    "date_of_death": "1910-11-20"
-  }
-]
+        {
+            "name": "George Orwell",
+            "birth_date": "1903-06-25",
+            "date_of_death": "1950-01-21"
+        },
+        {
+            "name": "J.K. Rowling",
+            "birth_date": "1965-07-31",
+            "date_of_death": ""
+        },
+        {
+            "name": "Jane Austen",
+            "birth_date": "1775-12-16",
+            "date_of_death": "1817-07-18"
+        },
+        {
+            "name": "Ernest Hemingway",
+            "birth_date": "1899-07-21",
+            "date_of_death": "1961-07-02"
+        },
+        {
+            "name": "Franz Kafka",
+            "birth_date": "1883-07-03",
+            "date_of_death": "1924-06-03"
+        },
+        {
+            "name": "Haruki Murakami",
+            "birth_date": "1949-01-12",
+            "date_of_death": ""
+        },
+        {
+            "name": "Leo Tolstoy",
+            "birth_date": "1828-09-09",
+            "date_of_death": "1910-11-20"
+        }
+    ]
 
     books_data = [
         {
@@ -269,6 +305,21 @@ def seed_data():
 
     return "Seed data added successfully!"
 
+
+@app.route("/book/<int:book_id>/delete", methods=['POST'])
+def delete_book(book_id):
+    book = Book.query.get(book_id)
+    print(book)
+    if not book:
+        return jsonify({"error": "Book not found!"}), 404
+
+    try:
+        db.session.delete(book)
+        db.session.commit()
+        return jsonify({"message": "Book deleted successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "An error occurred during deletion."}), 500
 
 
 @app.errorhandler(400)
