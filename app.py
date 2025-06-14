@@ -19,14 +19,26 @@ db.init_app(app)
 def check_date_validity(input_date):
     try:
         return datetime.datetime.strptime(input_date, "%Y-%m-%d").date()
-    except ValueError:
-        return "Error!"
+    except (ValueError, TypeError):
+        return None
 
 
 def check_lifespan_validity(birthdate, date_of_death):
     if (date_of_death - birthdate).total_seconds() < 0:
         return "Error!"
     return ""
+
+
+@app.route("/")
+def home():
+    books_with_authors = (db.session.query(Book.title, Author.name, Book.isbn).join(Author)\
+                          .order_by(Book.title).all())
+    books = [
+        {"title": title, "author": author, "isbn": isbn}
+        for title, author, isbn in books_with_authors
+    ]
+    return render_template("home.html", books=books)
+
 
 
 @app.route("/add_author", methods=["GET", "POST"])
@@ -59,7 +71,7 @@ def add_author():
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            abort(400, desciption="Name need to be unique")
+            abort(400, description="Name need to be unique")
         except SQLAlchemyError:
             db.session.rollback()
             abort(400, description="Error with the database. Please try again")
@@ -97,7 +109,7 @@ def add_book():
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            abort(400, desciption="Title and ISBN need to be unique")
+            abort(400, description="Title and ISBN need to be unique")
         except SQLAlchemyError:
             db.session.rollback()
             abort(400, description="Error with the database. Please try again")
@@ -105,6 +117,135 @@ def add_book():
 
     return render_template("add_book.html", authors=authors)
 
+
+@app.route("/seed")
+def seed_data():
+    authors_data = [
+  {
+    "name": "George Orwell",
+    "birth_date": "1903-06-25",
+    "date_of_death": "1950-01-21"
+  },
+  {
+    "name": "J.K. Rowling",
+    "birth_date": "1965-07-31",
+    "date_of_death": ""
+  },
+  {
+    "name": "Jane Austen",
+    "birth_date": "1775-12-16",
+    "date_of_death": "1817-07-18"
+  },
+  {
+    "name": "Ernest Hemingway",
+    "birth_date": "1899-07-21",
+    "date_of_death": "1961-07-02"
+  },
+  {
+    "name": "Franz Kafka",
+    "birth_date": "1883-07-03",
+    "date_of_death": "1924-06-03"
+  },
+  {
+    "name": "Haruki Murakami",
+    "birth_date": "1949-01-12",
+    "date_of_death": ""
+  },
+  {
+    "name": "Leo Tolstoy",
+    "birth_date": "1828-09-09",
+    "date_of_death": "1910-11-20"
+  }
+]
+
+    books_data = [
+        {
+            "title": "1984",
+            "isbn": "9780451524935",
+            "publication_year": 1949,
+            "author": "George Orwell"
+        },
+        {
+            "title": "Harry Potter and the Philosopher's Stone",
+            "isbn": "9780747532699",
+            "publication_year": 1997,
+            "author": "J.K. Rowling"
+        },
+        {
+            "title": "Pride and Prejudice",
+            "isbn": "9780141439518",
+            "publication_year": 1813,
+            "author": "Jane Austen"
+        },
+        {
+            "title": "The Old Man and the Sea",
+            "isbn": "9780684801223",
+            "publication_year": 1952,
+            "author": "Ernest Hemingway"
+        },
+        {
+            "title": "The Trial",
+            "isbn": "9780805209990",
+            "publication_year": 1925,
+            "author": "Franz Kafka"
+        },
+        {
+            "title": "Norwegian Wood",
+            "isbn": "9780375704024",
+            "publication_year": 1987,
+            "author": "Haruki Murakami"
+        },
+        {
+            "title": "Anna Karenina",
+            "isbn": "9780143035008",
+            "publication_year": 1878,
+            "author": "Leo Tolstoy"
+        }
+    ]
+
+    authors = {}
+    for data in authors_data:
+        name = data["name"]
+        birth_date = check_date_validity(data["birth_date"])
+        date_of_death = check_date_validity(data["date_of_death"])
+
+        existing = Author.query.filter_by(name=name).first()
+        if not existing:
+            author = Author(
+                name=name,
+                birth_date=birth_date,
+                date_of_death=date_of_death
+            )
+            db.session.add(author)
+            db.session.flush()
+            authors[name] = author
+        else:
+            authors[name] = existing
+
+    db.session.commit()
+
+    for book in books_data:
+        existing_book = Book.query.filter_by(title=book["title"]).first()
+        if not existing_book:
+            author = authors.get(book["author"])
+            if not author:
+                return f"Author '{book['author']}' not found."
+
+            new_book = Book(
+                title=book["title"],
+                isbn=book["isbn"],
+                publication_year=book["publication_year"],
+                author_id=author.id
+            )
+            db.session.add(new_book)
+
+    try:
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        return f"Error inserting data: {str(e)}"
+
+    return "Seed data added successfully!"
 
 @app.errorhandler(400)
 def bad_request(error):
@@ -118,9 +259,3 @@ def not_found(error):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002, debug=True)
-
-"""
-Create a Flask route called /add_author that renders the add_author.html form used to gather 
-information about an author when a GET request comes in, and adds a new author record to the database using SQLAlchemy when a POST request comes in. 
-When a new author has successfully been added to the database, a success message should be displayed on the /add_author page.
-Note that because you created an autoincrementing Primary Key for the id column of the Author model, you do not need to show a text field in the form for the user to insert their own author id."""

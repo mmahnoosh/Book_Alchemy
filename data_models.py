@@ -30,7 +30,7 @@ class Book(db.Model):
     title = Column(String(100), nullable=False, unique=True)
     publication_year = Column(Integer, nullable=False)
     author_id = Column(Integer, db.ForeignKey("authors.id"))
-
+    cover_image = Column(String(200))
     author = db.relationship("Author", back_populates="books")
 
     def __repr__(self):
