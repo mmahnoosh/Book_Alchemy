@@ -28,18 +28,30 @@ def check_lifespan_validity(birthdate, date_of_death):
         return "Error!"
     return ""
 
-
 @app.route("/")
 def home():
-    books_with_authors = (db.session.query(Book.title, Author.name, Book.isbn).join(Author)\
-                          .order_by(Book.title).all())
+    sort_by = request.args.get("sort_by", "title")  # Standard: Titel
+
+    if sort_by == "author":
+        books_with_authors = (
+            db.session.query(Book.title, Author.name, Book.isbn)
+            .join(Author)
+            .order_by(Author.name, Book.title)
+            .all()
+        )
+    else:
+        books_with_authors = (
+            db.session.query(Book.title, Author.name, Book.isbn)
+            .join(Author)
+            .order_by(Book.title, Author.name)
+            .all()
+        )
+
     books = [
         {"title": title, "author": author, "isbn": isbn}
         for title, author, isbn in books_with_authors
     ]
-    return render_template("home.html", books=books)
-
-
+    return render_template("home.html", books=books, sort_by=sort_by)
 
 @app.route("/add_author", methods=["GET", "POST"])
 def add_author():
@@ -246,6 +258,8 @@ def seed_data():
         return f"Error inserting data: {str(e)}"
 
     return "Seed data added successfully!"
+
+
 
 @app.errorhandler(400)
 def bad_request(error):

@@ -18,7 +18,11 @@
 
     h1 {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    form {
+      margin-bottom: 1.5rem;
     }
 
     .book-list {
@@ -52,18 +56,26 @@
 
   <h1>Book List</h1>
 
- <div class="book-list">
-  {% for book in books %}
-  <div class="book-item">
-    <img src="https://covers.openlibrary.org/b/isbn/{{ book.isbn }}-M.jpg"
-         alt="Cover von {{ book.title }}"
-         style="width: 100px; float: left; margin-right: 1rem;" />
-    <div style="overflow: hidden;">
-      <p class="book-title">{{ book.title }}</p>
-      <p class="book-author">Author: {{ book.author }}</p>
+  <form method="get" action="/">
+    <label for="sort_by">Sortieren nach:</label>
+    <select name="sort_by" id="sort_by" onchange="this.form.submit()">
+      <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Titel</option>
+      <option value="author" {% if sort_by == 'author' %}selected{% endif %}>Autor</option>
+    </select>
+  </form>
+
+  <div class="book-list">
+    {% for book in books %}
+    <div class="book-item">
+      <img src="https://covers.openlibrary.org/b/isbn/{{ book.isbn }}-M.jpg"
+           alt="Cover von {{ book.title }}"
+           style="width: 100px; float: left; margin-right: 1rem;" />
+      <div style="overflow: hidden;">
+        <p class="book-title">{{ book.title }}</p>
+        <p class="book-author">Author: {{ book.author }}</p>
+      </div>
     </div>
+    {% endfor %}
   </div>
-  {% endfor %}
-</div>
 </body>
 </html>
