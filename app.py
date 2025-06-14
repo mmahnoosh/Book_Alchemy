@@ -28,31 +28,41 @@ def check_lifespan_validity(birthdate, date_of_death):
         return "Error!"
     return ""
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def home():
-    sort_by = request.args.get("sort_by", "title")  # Standard: Titel
+    search_query = request.args.get("search_query", "")
+    sort_by = request.args.get("sort_by", "title")
 
+    # Starte eine SQLAlchemy-Abfrage mit Join
+    query = db.session.query(Book.title, Author.name.label("author"), Book.isbn).join(Author)
+
+    # Optionaler Filter: Suche in Titel **oder** Autorname
+    if search_query:
+        search_term = f"%{search_query}%"
+        query = query.filter(
+            db.or_(
+                Book.title.ilike(search_term),
+                Author.name.ilike(search_term)
+            )
+        )
+
+    # Sortierung nach Autor oder Titel
     if sort_by == "author":
-        books_with_authors = (
-            db.session.query(Book.title, Author.name, Book.isbn)
-            .join(Author)
-            .order_by(Author.name, Book.title)
-            .all()
-        )
+        query = query.order_by(Author.name, Book.title)
     else:
-        books_with_authors = (
-            db.session.query(Book.title, Author.name, Book.isbn)
-            .join(Author)
-            .order_by(Book.title, Author.name)
-            .all()
-        )
+        query = query.order_by(Book.title, Author.name)
 
+    # Abfrage ausführen
+    books_raw = query.all()
+
+    # Tupel in Dictionaries umwandeln
     books = [
         {"title": title, "author": author, "isbn": isbn}
-        for title, author, isbn in books_with_authors
+        for title, author, isbn in books_raw
     ]
-    return render_template("home.html", books=books, sort_by=sort_by)
 
+    # Übergabe an das Template
+    return render_template("home.html", books=books, sort_by=sort_by, search_query=search_query)
 @app.route("/add_author", methods=["GET", "POST"])
 def add_author():
     if request.method == "POST":

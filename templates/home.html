@@ -23,6 +23,31 @@
 
     form {
       margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: row;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 200px;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    select {
+      padding: 0.5rem;
+      border-radius: 5px;
     }
 
     .book-list {
@@ -38,6 +63,8 @@
       padding: 1rem 1.5rem;
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      gap: 1rem;
     }
 
     .book-title {
@@ -57,25 +84,33 @@
   <h1>Book List</h1>
 
   <form method="get" action="/">
-    <label for="sort_by">Sortieren nach:</label>
+    <label for="sort_by">Sort by:</label>
     <select name="sort_by" id="sort_by" onchange="this.form.submit()">
-      <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Titel</option>
-      <option value="author" {% if sort_by == 'author' %}selected{% endif %}>Autor</option>
+      <option value="title" {% if sort_by=='title' %}selected{% endif %}>Title</option>
+      <option value="author" {% if sort_by=='author' %}selected{% endif %}>Author</option>
     </select>
+
+    <input type="text" name="search_query" placeholder="Search by title..."
+           value="{{ search_key }}">
+    <button type="submit">Search</button>
   </form>
 
+  {% if books %}
   <div class="book-list">
     {% for book in books %}
     <div class="book-item">
       <img src="https://covers.openlibrary.org/b/isbn/{{ book.isbn }}-M.jpg"
-           alt="Cover von {{ book.title }}"
-           style="width: 100px; float: left; margin-right: 1rem;" />
-      <div style="overflow: hidden;">
+           alt="Cover of {{ book.title }}"
+           style="width: 100px;" />
+      <div>
         <p class="book-title">{{ book.title }}</p>
         <p class="book-author">Author: {{ book.author }}</p>
       </div>
     </div>
     {% endfor %}
   </div>
+  {% else %}
+    <p>No books found.</p>
+  {% endif %}
 </body>
 </html>
