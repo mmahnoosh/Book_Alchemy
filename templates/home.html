@@ -32,6 +32,27 @@
       max-width: 600px;
     }
 
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .action-buttons a {
+      padding: 0.6rem 1.2rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: background-color 0.2s;
+    }
+
+    .action-buttons a:hover {
+      background-color: #0056b3;
+    }
+
     form {
       margin-bottom: 1.5rem;
       display: flex;
@@ -106,6 +127,11 @@
       {% endfor %}
     {% endif %}
   {% endwith %}
+
+  <div class="action-buttons">
+    <a href="{{ url_for('add_book') }}">Add Book</a>
+    <a href="{{ url_for('add_author') }}">Add Author</a>
+  </div>
 
   <form method="get" action="/">
     <label for="sort_by">Sort by:</label>

@@ -1,7 +1,7 @@
 import datetime
 import os
 
-from flask import Flask, render_template, request, abort, url_for
+from flask import Flask, render_template, request, abort, url_for, redirect
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from data_models import db, Author, Book
@@ -115,13 +115,13 @@ def add_author():
         try:
             db.session.add(author)
             db.session.commit()
+            return redirect(url_for("home"))
         except IntegrityError:
             db.session.rollback()
             abort(400, description="Name need to be unique")
         except SQLAlchemyError:
             db.session.rollback()
             abort(400, description="Error with the database. Please try again")
-        return f"{author.name} added successfully"
 
     return render_template("add_author.html")
 
@@ -159,13 +159,13 @@ def add_book():
         try:
             db.session.add(book)
             db.session.commit()
+            return redirect(url_for("home"))
         except IntegrityError:
             db.session.rollback()
             abort(400, description="Title and ISBN need to be unique")
         except SQLAlchemyError:
             db.session.rollback()
             abort(400, description="Error with the database. Please try again")
-        return f"{book.title} added successfully"
 
     return render_template("add_book.html", authors=authors)
 
@@ -185,7 +185,7 @@ def delete_book(book_id):
     try:
         db.session.delete(book)
         db.session.commit()
-        return url_for("home")
+        return redirect(url_for("home"))
     except SQLAlchemyError:
         db.session.rollback()
         abort(400, description="An error occurred during deletion.")
