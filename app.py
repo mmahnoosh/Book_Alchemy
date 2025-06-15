@@ -1,7 +1,7 @@
 import datetime
 import os
 
-from flask import Flask, render_template, request, abort, jsonify
+from flask import Flask, render_template, request, abort, url_for
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from data_models import db, Author, Book
@@ -24,7 +24,7 @@ def check_date_validity(input_date):
     try:
         return datetime.datetime.strptime(input_date, "%Y-%m-%d").date()
     except (ValueError, TypeError):
-        return None
+        return "Error!"
 
 
 def check_lifespan_validity(birthdate, date_of_death):
@@ -170,163 +170,25 @@ def add_book():
     return render_template("add_book.html", authors=authors)
 
 
-@app.route("/seed")
-def seed_data():
-    """
-        Populates the database with initial authors and books data.
-
-        Checks for existing entries to avoid duplicates,
-        validates dates, and commits all new records to the database.
-    """
-    authors_data = [
-        {
-            "name": "George Orwell",
-            "birth_date": "1903-06-25",
-            "date_of_death": "1950-01-21"
-        },
-        {
-            "name": "J.K. Rowling",
-            "birth_date": "1965-07-31",
-            "date_of_death": ""
-        },
-        {
-            "name": "Jane Austen",
-            "birth_date": "1775-12-16",
-            "date_of_death": "1817-07-18"
-        },
-        {
-            "name": "Ernest Hemingway",
-            "birth_date": "1899-07-21",
-            "date_of_death": "1961-07-02"
-        },
-        {
-            "name": "Franz Kafka",
-            "birth_date": "1883-07-03",
-            "date_of_death": "1924-06-03"
-        },
-        {
-            "name": "Haruki Murakami",
-            "birth_date": "1949-01-12",
-            "date_of_death": ""
-        },
-        {
-            "name": "Leo Tolstoy",
-            "birth_date": "1828-09-09",
-            "date_of_death": "1910-11-20"
-        }
-    ]
-
-    books_data = [
-        {
-            "title": "1984",
-            "isbn": "9780451524935",
-            "publication_year": 1949,
-            "author": "George Orwell"
-        },
-        {
-            "title": "Harry Potter and the Philosopher's Stone",
-            "isbn": "9780747532699",
-            "publication_year": 1997,
-            "author": "J.K. Rowling"
-        },
-        {
-            "title": "Pride and Prejudice",
-            "isbn": "9780141439518",
-            "publication_year": 1813,
-            "author": "Jane Austen"
-        },
-        {
-            "title": "The Old Man and the Sea",
-            "isbn": "9780684801223",
-            "publication_year": 1952,
-            "author": "Ernest Hemingway"
-        },
-        {
-            "title": "The Trial",
-            "isbn": "9780805209990",
-            "publication_year": 1925,
-            "author": "Franz Kafka"
-        },
-        {
-            "title": "Norwegian Wood",
-            "isbn": "9780375704024",
-            "publication_year": 1987,
-            "author": "Haruki Murakami"
-        },
-        {
-            "title": "Anna Karenina",
-            "isbn": "9780143035008",
-            "publication_year": 1878,
-            "author": "Leo Tolstoy"
-        }
-    ]
-
-    authors = {}
-    for data in authors_data:
-        name = data["name"]
-        birth_date = check_date_validity(data["birth_date"])
-        date_of_death = check_date_validity(data["date_of_death"])
-
-        existing = Author.query.filter_by(name=name).first()
-        if not existing:
-            author = Author(
-                name=name,
-                birth_date=birth_date,
-                date_of_death=date_of_death
-            )
-            db.session.add(author)
-            db.session.flush()
-            authors[name] = author
-        else:
-            authors[name] = existing
-
-    db.session.commit()
-
-    for book in books_data:
-        existing_book = Book.query.filter_by(title=book["title"]).first()
-        if not existing_book:
-            author = authors.get(book["author"])
-            if not author:
-                return f"Author '{book['author']}' not found."
-
-            new_book = Book(
-                title=book["title"],
-                isbn=book["isbn"],
-                publication_year=book["publication_year"],
-                author_id=author.id
-            )
-            db.session.add(new_book)
-
-    try:
-        db.session.commit()
-    except IntegrityError as e:
-        db.session.rollback()
-        return f"Error inserting data: {str(e)}"
-
-    return "Seed data added successfully!"
-
-
 @app.route("/book/<int:book_id>/delete", methods=['POST'])
 def delete_book(book_id):
     """
-       Deletes a book by its ID.
-       Returns a success message if deletion is successful,
-       or an error message if the book is not found or deletion fails.
+        Deletes a book by its ID.
+        Returns a success message if deletion is successful,
+        or an error message if the book is not found or deletion fails.
     """
     book = Book.query.get(book_id)
     print(book)
     if not book:
-        return jsonify({"error": "Book not found!"}), 404
-
-    book_title = book.title  # Save title before deleting
+        abort(404, description="Book not found!")
 
     try:
         db.session.delete(book)
         db.session.commit()
-        return jsonify({"message": f"'{book_title}' was deleted successfully."}), 200
-    except Exception as e:
+        return url_for("home")
+    except SQLAlchemyError:
         db.session.rollback()
-        return jsonify({"error": "An error occurred during deletion."}), 500
+        abort(400, description="An error occurred during deletion.")
 
 
 @app.errorhandler(400)
