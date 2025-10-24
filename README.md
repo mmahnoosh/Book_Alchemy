@@ -48,24 +48,6 @@ python app.py
 
 Then open your browser at 👉 http://localhost:5000
 
----
-## 🗂️ Project Structure
-
-$ tree -L 2
-.
-├── data
-│   ├── library.sqlite
-│   └── library.sqbpro
-├── instance
-├── templates
-│   ├── add_author.html
-│   ├── add_book.html
-│   ├── error.html
-│   └── home.html
-├── app.py
-├── data_models.py
-├── home.py
-└── test
 
 ---
 ## 🔒 Security
